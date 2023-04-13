@@ -8,6 +8,7 @@
   },
   "keywords": [],
   "author": "",
+<<<<<<< HEAD
   "license": "ISC",
   "dependencies": {
     "@ar-js-org/ar.js": "^3.4.5",
@@ -16,4 +17,7 @@
     "aframe-osm-3d": "^0.5.2",
     "three": "^0.151.3"
   }
+=======
+  "license": "ISC"
+>>>>>>> 12091288b20dad1f0f3d2444ba2c340c8ca9809e
 }
