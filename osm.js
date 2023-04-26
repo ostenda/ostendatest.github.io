@@ -28,13 +28,13 @@ AFRAME.registerComponent('osm', {
         }
     },
 
-    _readOsm: function(streetName) {
+    _readOsm: function(lat, lon) {
         const gpsCameraComponent = this.camera.components["gps-new-camera"];
         if(!gpsCameraComponent) {
             alert('gps-new-camera component not initialised');
             return;
         }
-        fetch(`https://hikar.org/webapp/map?bbox=${this.data.longitude - 0.01},${this.data.latitude - 0.01},${this.data.longitude + 0.01},${this.data.latitude + 0.01}&layers=ways&outProj=4326`)
+        fetch(`https://hikar.org/webapp/map?bbox=${lon - 0.01},${lat - 0.01},${lon + 0.01},${lat + 0.01}&layers=ways&outProj=4326`)
             .then(response => response.json())
             .then(json => {
                 const drawProps = {
@@ -50,17 +50,17 @@ AFRAME.registerComponent('osm', {
                 json.features.forEach((f, i) => {
                     const line = [];
                     let projectedCoords;
-                    if (f.geometry.type == 'LineString' && f.geometry.coordinates.length >= 2 && f.properties.name && f.properties.name.toLowerCase() === streetName.toLowerCase()) {
+                    if (f.geometry.type == 'LineString' && f.geometry.coordinates.length >= 2) {
                         f.geometry.coordinates.forEach(coord => {
                             projectedCoords = gpsCameraComponent.threeLoc.lonLatToWorldCoords(coord[0], coord[1]);
                             line.push([projectedCoords[0], 0, projectedCoords[1]]);
                         });
-    
+
                         if (line.length >= 2) {
                             const g = new OsmWay(line, (drawProps[f.properties.highway] ? (drawProps[f.properties.highway].width || 5) : 5)).geometry;
-    
+
                             const color = drawProps[f.properties.highway] ? (drawProps[f.properties.highway].color || '#ffffff') : '#ffffff';
-    
+
                             const mesh = new THREE.Mesh(g,
                                 new THREE.MeshBasicMaterial({
                                     color: color
@@ -70,14 +70,9 @@ AFRAME.registerComponent('osm', {
                         }
                     }
                 });
-                if (objectIds.length > 0) {
-                    this.el.emit('vector-ways-loaded', {
-                        objectIds: objectIds
-                    });
-                } else {
-                    alert(`Could not find street "${streetName}"`);
-                }
+                this.el.emit('vector-ways-loaded', {
+                    objectIds: objectIds
+                });
             });
     }
-    
 });
