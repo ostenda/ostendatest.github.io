@@ -1,3 +1,4 @@
+/* 
 class OsmWay {
     constructor(vertices, width = 1) {
       let dx, dz, len, dxperp, dzperp, nextVtxProvisional = [], thisVtxProvisional;
@@ -70,4 +71,33 @@ class OsmWay {
       return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
   }
-  
+  */
+
+  class OsmWay {
+    constructor(vertices, width = 1) {
+        const shape = new THREE.Shape();
+        const k = vertices.length - 1;
+        const points = [];
+        for (let i = 0; i <= k; i++) {
+            const p = new THREE.Vector2(vertices[i][0], vertices[i][2]);
+            points.push(p);
+            if (i === 0) {
+                shape.moveTo(p.x, p.y);
+            } else {
+                shape.lineTo(p.x, p.y);
+            }
+        }
+        const extrudeSettings = {
+            depth: width,
+            bevelEnabled: false,
+        };
+        const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        const bufVertices = geom.getAttribute('position').array;
+        const realVertices = [];
+        for (let i = 0, len = bufVertices.length; i < len; i += 3) {
+            realVertices.push(bufVertices[i], bufVertices[i + 1], bufVertices[i + 2]);
+        }
+        this.geometry = new THREE.BufferGeometry();
+        this.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(realVertices), 3));
+    }
+}
