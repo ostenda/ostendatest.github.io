@@ -1,76 +1,68 @@
-
 AFRAME.registerComponent('osm', {
     schema: {
-        latitude: {
-            type: 'number',
-            default: 0
-        },
-        longitude: {
-            type: 'number',
-            default: 0
-        }
+      latitude: { type: 'number', default: 0 },
+      longitude: { type: 'number', default: 0 }
     },
-
-    init: function() {
-        this.downloaded = false;
-        this.camera = document.querySelector("[gps-new-camera]");
-        this.camera.addEventListener("gps-camera-update-position", e=> {
-            if(!this.downloaded) {
-                this._readOsm(e.detail.position.latitude, e.detail.position.longitude);
-                this.downloaded = true;
+    init: function () {
+      this.downloaded = false;
+      this.camera = document.querySelector('[gps-new-camera]');
+      this.camera.addEventListener('gps-camera-update-position', this.handleCameraUpdate.bind(this));
+    },
+    update: function () {
+      const { latitude, longitude } = this.data;
+      if (latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180) {
+        this.readOsm(latitude, longitude);
+      }
+    },
+    handleCameraUpdate: function (event) {
+      if (!this.downloaded) {
+        const { latitude, longitude } = event.detail.position;
+        this.readOsm(latitude, longitude);
+        this.downloaded = true;
+      }
+    },
+    readOsm: function (lat, lon) {
+      const gpsCameraComponent = this.camera.components['gps-new-camera'];
+      if (!gpsCameraComponent) {
+        console.warn('gps-new-camera component not initialized');
+        return;
+      }
+      const bbox = `${lon - 0.01},${lat - 0.01},${lon + 0.01},${lat + 0.01}`;
+      const url = `https://hikar.org/webapp/map?bbox=${bbox}&layers=ways&outProj=4326`;
+      fetch(url)
+        .then(response => response.json())
+        .then(json => {
+          const drawProps = {
+            'footway': { color: '#000000' },
+            'path': { color: '#000000' },
+            'bridleway': { color: '#000000' },
+            'byway': { color: '#000000' },
+            'track': { color: '#000000' },
+          };
+          const objectIds = [];
+          json.features.forEach((feature, index) => {
+            const { geometry, properties } = feature;
+            if (geometry.type !== 'LineString' || geometry.coordinates.length < 2) {
+              return;
             }
-        });
-    },
-
-    update: function() {
-        if (this.data.latitude >= -90 && this.data.latitude <= 90 && this.data.longitude >= -180 && this.data.longitude <= 180) {
-            this._readOsm(this.data.latitude, this.data.longitude);
-        }
-    },
-
-    _readOsm: function(lat, lon) {
-        const gpsCameraComponent = this.camera.components["gps-new-camera"];
-        if(!gpsCameraComponent) {
-            alert('gps-new-camera component not initialised');
-            return;
-        }
-        fetch(`https://hikar.org/webapp/map?bbox=${lon - 0.01},${lat - 0.01},${lon + 0.01},${lat + 0.01}&layers=ways&outProj=4326`)
-            .then(response => response.json())
-            .then(json => {
-                const drawProps = {
-                    'footway': { color: '##000000' },
-                    'path': { color: '##000000' },
-                    'bridleway': { color: '##000000' },
-                    'byway': { color: '##000000' },
-                    'track': { color: '##000000' },
-                };
-                const objectIds = [];
-                json.features.forEach((f, i) => {
-                    const line = [];
-                    let projectedCoords;
-                    if (f.geometry.type == 'LineString' && f.geometry.coordinates.length >= 2) {
-                        f.geometry.coordinates.forEach(coord => {
-                            projectedCoords = gpsCameraComponent.threeLoc.lonLatToWorldCoords(coord[0], coord[1]);
-                            line.push([projectedCoords[0], 0, projectedCoords[1]]);
-                        });
-
-                        if (line.length >= 2) {
-                            const g = new OsmWay(line, (drawProps[f.properties.highway] ? (drawProps[f.properties.highway].width || 5) : 5)).geometry;
-
-                            const color = drawProps[f.properties.highway] ? (drawProps[f.properties.highway].color || '#ffffff') : '#ffffff';
-
-                            const mesh = new THREE.Mesh(g,
-                                new THREE.MeshBasicMaterial({
-                                    color: color
-                                }));
-                            this.el.setObject3D(f.properties.osm_id, mesh);
-                            objectIds.push(f.properties.osm_id);
-                        }
-                    }
-                });
-                this.el.emit('vector-ways-loaded', {
-                    objectIds: objectIds
-                });
+            const line = [];
+            geometry.coordinates.forEach(coord => {
+              const [x, y] = gpsCameraComponent.threeLoc.lonLatToWorldCoords(coord[0], coord[1]);
+              line.push([x, 0, y]);
             });
+            const highway = properties.highway;
+            const color = drawProps[highway] ? drawProps[highway].color || '#000000' : '#000000';
+            const width = drawProps[highway] ? drawProps[highway].width || 2 : 2;
+            const material = new THREE.MeshBasicMaterial({ color });
+            const mesh = new THREE.Mesh(new OsmWay(line, width).geometry, material);
+            this.el.setObject3D(properties.osm_id, mesh);
+            objectIds.push(properties.osm_id);
+          });
+          this.el.emit('vector-ways-loaded', { objectIds });
+        })
+        .catch(error => {
+          console.error('Failed to fetch OSM data:', error);
+        });
     }
-});
+  });
+  
