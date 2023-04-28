@@ -3,11 +3,11 @@ AFRAME.registerComponent('osm', {
     schema: {
         latitude: {
             type: 'number',
-            default: 181
+            default: 0
         },
         longitude: {
             type: 'number',
-            default: 91
+            default: 0
         }
     },
 
@@ -38,13 +38,11 @@ AFRAME.registerComponent('osm', {
             .then(response => response.json())
             .then(json => {
                 const drawProps = {
-                    'footway': { color: '#00ff00' },
-                    'path': { color: '#00ff00' },
-                    'steps': { color: '#00ff00' },
-                    'bridleway': { color: '#ffc000' },
-                    'byway': { color: '#ff0000' },
-                    'track': { color: '#ff8080' },
-                    'cycleway': { color: '#00ffff' },
+                    'footway': { color: '##000000' },
+                    'path': { color: '##000000' },
+                    'bridleway': { color: '##000000' },
+                    'byway': { color: '##000000' },
+                    'track': { color: '##000000' },
                 };
                 const objectIds = [];
                 json.features.forEach((f, i) => {
