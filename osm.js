@@ -54,7 +54,7 @@ AFRAME.registerComponent('osm', {
             const color = drawProps[highway] ? drawProps[highway].color || '#000000' : '#000000';
             const width = drawProps[highway] ? drawProps[highway].width || 2 : 2;
             const material = new THREE.MeshBasicMaterial({ color });
-            const mesh = new THREE.Mesh(new OsmWay(line, width).geometry, material);
+            const mesh = new THREE.Mesh(new Way(line, width).geometry, material);
             this.el.setObject3D(properties.osm_id, mesh);
             objectIds.push(properties.osm_id);
           });

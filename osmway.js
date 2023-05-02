@@ -1,47 +1,66 @@
-// Define a class called OsmWay
+
 class OsmWay {
-    // The constructor function takes an array of vertices and a width as arguments
     constructor(vertices, width = 1) {
-        // Define two empty arrays to hold the actual vertices and indices of the geometry
+        let dx, dz, len, dxperp, dzperp, nextVtxProvisional = [], thisVtxProvisional;
+        const k = vertices.length - 1;
         const realVertices = [];
-        const indices = [];
+        for (let i = 0; i < k; i++) {
+            dx = vertices[i + 1][0] - vertices[i][0];
+            dz = vertices[i + 1][2] - vertices[i][2];
+            len = this.distance(vertices[i], vertices[i + 1]);
+            dxperp = -(dz * (width / 2)) / len;
+            dzperp = dx * (width / 2) / len;
+            thisVtxProvisional = [
+                vertices[i][0] - dxperp,
+                vertices[i][1],
+                vertices[i][2] - dzperp,
+                vertices[i][0] + dxperp,
+                vertices[i][1],
+                vertices[i][2] + dzperp,
+            ];
+            if (i > 0) {
+                // Ensure the vertex positions are influenced not just by this
+                // segment but also the previous segment
+                thisVtxProvisional.forEach((vtx, j) => {
+                    vtx = (vtx + nextVtxProvisional[j]) / 2;
+                });
+            }
+            realVertices.push(...thisVtxProvisional);
+            nextVtxProvisional = [
+                vertices[i + 1][0] - dxperp,
+                vertices[i + 1][1],
+                vertices[i + 1][2] - dzperp,
+                vertices[i + 1][0] + dxperp,
+                vertices[i + 1][1],
+                vertices[i + 1][2] + dzperp,
+            ];
+        }
+        realVertices.push(vertices[k][0] - dxperp);
+        realVertices.push(vertices[k][1]);
+        realVertices.push(vertices[k][2] - dzperp);
+        realVertices.push(vertices[k][0] + dxperp);
+        realVertices.push(vertices[k][1]);
+        realVertices.push(vertices[k][2] + dzperp);
 
-        // Loop through each vertex in the input array, except for the last one
-        for (let i = 0; i < vertices.length - 1; i++) {
-            // Get the current vertex and the next one in the array
-            const p1 = vertices[i];
-            const p2 = vertices[i + 1];
-
-            // Calculate the x and z differences between the two vertices, and the length of the line segment connecting them
-            const dx = p2[0] - p1[0];
-            const dz = p2[2] - p1[2];
-            const len = Math.sqrt(dx * dx + dz * dz);
-
-            // Calculate the x and z components of the perpendicular vector to the line segment
-            const dxperp = -dz * (width / (2 * len));
-            const dzperp = dx * (width / (2 * len));
-
-            // Calculate the four corners of a rectangle that extends width/2 units to either side of the line segment and is perpendicular to it
-            const v1 = [p1[0] + dxperp, p1[1], p1[2] + dzperp];
-            const v2 = [p1[0] - dxperp, p1[1], p1[2] - dzperp];
-            const v3 = [p2[0] + dxperp, p2[1], p2[2] + dzperp];
-            const v4 = [p2[0] - dxperp, p2[1], p2[2] - dzperp];
-
-            // Add the four corner vertices to the realVertices array, and keep track of their index offset
-            const offset = realVertices.length / 3;
-            realVertices.push(v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], v3[0], v3[1], v3[2], v4[0], v4[1], v4[2]);
-
-            // Add the indices of the four vertices to the indices array, to define two triangles that make up a rectangle
-            indices.push(offset, offset + 1, offset + 2, offset + 1, offset + 3, offset + 2);
+        let indices = [];
+        for (let i = 0; i < k; i++) {
+            indices.push(i * 2, i * 2 + 1, i * 2 + 2);
+            indices.push(i * 2 + 1, i * 2 + 3, i * 2 + 2);
         }
 
-        // Create a new BufferGeometry object and set its position attribute to the realVertices array, and its index attribute to the indices array
-        const geom = new THREE.BufferGeometry();
-        geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(realVertices), 3));
-        geom.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
+        let geom = new THREE.BufferGeometry();
+        let bufVertices = new Float32Array(realVertices);
+        geom.setIndex(indices);
+        geom.setAttribute('position', new THREE.BufferAttribute(bufVertices, 3));
         geom.computeBoundingBox();
-
-        // Set the geometry property of this object to the newly created BufferGeometry object
         this.geometry = geom;
     }
+
+    distance(v1, v2) {
+        const dx = v2[0] - v1[0];
+        const dy = v2[1] - v1[1];
+        const dz = v2[2] - v1[2];
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
 }
+
